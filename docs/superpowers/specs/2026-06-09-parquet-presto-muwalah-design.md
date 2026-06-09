@@ -41,6 +41,7 @@ parquet-presto-muwalah/
 │   │   ├── 002-partition-strategy.md
 │   │   ├── 003-compression-codec.md
 │   │   └── 004-ai-integration.md
+│   ├── user-personas.md          # Target user personas & experience framing
 │   └── cost-model.md            # TCO comparison: legacy vs modern
 ├── data/
 │   ├── raw/                     # Original Olist CSVs (gitignored)
@@ -100,7 +101,46 @@ This conversion pipeline IS part of the demo — it shows PM understanding of th
 
 ---
 
-## 5. Presto (Trino) Setup
+## 5. User Personas (`docs/user-personas.md`)
+
+Two personas that frame every design decision in the project.
+
+### 5.1 The Data Consumer — "Rafaela, Business Analyst"
+
+- Works at Muwalah Commerce's commercial team in São Paulo
+- Runs 10-15 queries/day to answer questions from leadership: revenue trends, category performance, delivery SLA compliance, customer retention
+- Today's pain: queries on CSV files take minutes, time out on large date ranges, and can't join across datasets without manual Excel work. Asks data engineering for help weekly.
+- What success looks like: self-service queries that return in seconds, ability to slice by geography/time/category without waiting, and confidence the numbers are correct
+- AI-era need: wants to ask questions in plain language ("why did returns spike in Rio last month?") instead of writing SQL from scratch
+- Key jobs-to-be-done:
+  - Prepare the weekly revenue report by region (today: 2 hours, target: 5 minutes)
+  - Investigate anomalies flagged by leadership (today: files a ticket, target: self-service)
+  - Find product trends to inform purchasing decisions (today: gut feel, target: data-backed)
+
+### 5.2 The Platform Decision-Maker — "Carlos, Data Platform PM"
+
+- Owns the analytics infrastructure roadmap at Muwalah Commerce
+- Evaluates build-vs-buy, format migrations, and query engine choices
+- Today's pain: CSV-based pipeline breaks when data volume grows, no schema enforcement means data quality issues surface in dashboards, and the team can't adopt ML tools because data isn't in a consumable format
+- What success looks like: a storage format that scales, self-documents (schema), compresses well (lower cloud costs), and serves both analytics and AI workloads without a separate ETL
+- Decision criteria: TCO reduction, query performance, schema evolution support, ecosystem compatibility (Presto, Spark, pandas), and AI readiness
+- Key jobs-to-be-done:
+  - Build the business case for migration (needs: benchmark data, cost projections)
+  - Choose the right format and engine (needs: comparative analysis, ADRs)
+  - De-risk the migration (needs: proof-of-concept on real data)
+
+### 5.3 How Personas Map to Project Artifacts
+
+| Persona | Primary artifacts they validate |
+|---|---|
+| Rafaela (analyst) | Business queries, NL→SQL demo, query performance benchmarks |
+| Carlos (platform PM) | ADRs, cost model, format comparison, conversion pipeline |
+
+Every query in the project should answer a question Rafaela would actually ask. Every document should address a concern Carlos would actually raise.
+
+---
+
+## 6. Presto (Trino) Setup
 
 Single `docker-compose.yml` running Trino with a Hive connector pointing at local Parquet files. One command to start, one to stop.
 
@@ -108,7 +148,7 @@ Trino is the community continuation of Presto — same SQL dialect, same concept
 
 ---
 
-## 6. Business Queries
+## 7. Business Queries (driven by Rafaela's needs)
 
 Six queries, each exercising a different Parquet/Presto capability:
 
@@ -129,7 +169,7 @@ Each query has a companion markdown file with:
 
 ---
 
-## 7. AI-Era Integration
+## 8. AI-Era Integration
 
 ### 7.1 Natural Language → SQL (NL→SQL)
 
@@ -159,7 +199,7 @@ Example: "Which product categories in São Paulo had the highest revenue in Q4 2
 
 ---
 
-## 8. Benchmarks & Cost Model
+## 9. Benchmarks & Cost Model (driven by Carlos's needs)
 
 ### 8.1 Format Comparison (`benchmarks/format_comparison.py`)
 
@@ -181,7 +221,7 @@ Simple table, not a financial model. The artifact that differentiates a PM from 
 
 ---
 
-## 9. Demo Flow
+## 10. Demo Flow
 
 10-minute guided walkthrough (`demo/walkthrough.md`):
 
@@ -195,7 +235,7 @@ Simple table, not a financial model. The artifact that differentiates a PM from 
 
 ---
 
-## 10. README Structure
+## 11. README Structure
 
 The README is a product brief, not a setup guide:
 
@@ -226,7 +266,7 @@ with a migration path to AI-native analytics.
 
 ---
 
-## 11. Tech Stack Summary
+## 12. Tech Stack Summary
 
 | Component | Tool | Size |
 |---|---|---|
