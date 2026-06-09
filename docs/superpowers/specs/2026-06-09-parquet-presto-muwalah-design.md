@@ -25,7 +25,8 @@ The README reads as a product decision document — not a tech tutorial. Intervi
 - MacBook Pro M4 Pro, 12 cores, 24GB RAM
 - 10GB storage budget
 - Everything runs locally (Docker + Python)
-- Estimated footprint: ~800MB Parquet data + ~1.5GB Trino Docker image = ~2.5GB
+- Estimated footprint: ~50MB Parquet data + ~1.5GB Trino Docker image = ~1.6GB
+- Data source: Olist Brazilian E-Commerce dataset from Kaggle (~100MB CSV)
 
 ---
 
@@ -42,7 +43,9 @@ parquet-presto-muwalah/
 │   │   └── 004-ai-integration.md
 │   └── cost-model.md            # TCO comparison: legacy vs modern
 ├── data/
-│   ├── generate.py              # Synthetic data generator
+│   ├── raw/                     # Original Olist CSVs (gitignored)
+│   ├── parquet/                 # Converted Parquet files (gitignored)
+│   ├── convert.py               # CSV → Parquet conversion pipeline
 │   └── schemas/                 # Parquet schema definitions
 ├── benchmarks/
 │   ├── format_comparison.py     # CSV vs JSON vs Parquet
@@ -59,32 +62,41 @@ parquet-presto-muwalah/
 
 ## 4. Data Model
 
-### 4.1 Tables
+### 4.1 Data Source
 
-| Table | Rows | Purpose |
-|---|---|---|
-| `orders` | ~2M | Partitioned by `year/month` — demonstrates partition pruning |
-| `products` | ~10K | Nested structs (attributes, tags) — shows nested type support |
-| `customers` | ~500K | PII columns — demonstrates column-level access patterns |
-| `clickstream` | ~5M | High-volume, sparse — shows compression wins and predicate pushdown |
+**Olist Brazilian E-Commerce Dataset** (Kaggle): ~100K real orders from Brazilian marketplace, 2016-2018. Nine related CSV files covering orders, items, products, customers, sellers, reviews, payments, and geolocation.
 
-### 4.2 Partition Strategy (ADR-002)
+### 4.2 Tables (Olist → Parquet mapping)
+
+| Parquet Table | Source CSVs | Rows | Purpose |
+|---|---|---|---|
+| `orders` | olist_orders + olist_order_items + olist_order_payments | ~100K orders, ~113K items | Partitioned by `year/month` — demonstrates partition pruning |
+| `products` | olist_products + category_name_translation | ~33K | Nested structs (dimensions, category hierarchy) — shows nested type support |
+| `customers` | olist_customers + olist_geolocation | ~100K | Geo columns — demonstrates column projection and geographic queries |
+| `reviews` | olist_order_reviews | ~100K | Review text + scores — predicate pushdown on score, text for AI embeddings |
+| `sellers` | olist_sellers + olist_geolocation | ~3K | Small dimension table — join target |
+
+### 4.3 Partition Strategy (ADR-002)
 
 - **orders:** partitioned by `year/month` — queries almost always filter by date range
-- **clickstream:** partitioned by `date` — high volume, always queried by day
-- **products, customers:** unpartitioned — small enough to scan fully
+- **reviews:** partitioned by `review_score` — enables fast filtering by rating tier
+- **products, customers, sellers:** unpartitioned — small enough to scan fully
 
-### 4.3 Compression (ADR-003)
+### 4.4 Compression (ADR-003)
 
-- **Snappy** for clickstream — fast decompression, high-volume reads
-- **Zstd** for orders and customers — better compression ratio, queried less frequently
+- **Snappy** for orders and reviews — larger tables, frequent reads, fast decompression
+- **Zstd** for customers — better compression ratio, queried less frequently
 
-### 4.4 Synthetic Data Generator
+### 4.5 Data Pipeline (`data/convert.py`)
 
-Python script using `pyarrow` with realistic distributions:
-- Seasonal sales spikes (Black Friday, holidays)
-- Category skew (electronics > home goods)
-- Geographic clustering (regional preferences)
+Python script using `pyarrow` that:
+1. Reads Olist CSVs from `data/raw/`
+2. Joins related tables (e.g., orders + items + payments into a denormalized orders table)
+3. Creates nested structs where appropriate (product dimensions, category hierarchy)
+4. Applies partition strategy and compression codec per table
+5. Writes Parquet files to `data/parquet/`
+
+This conversion pipeline IS part of the demo — it shows PM understanding of the ETL decisions involved in a format migration.
 
 ---
 
@@ -102,12 +114,12 @@ Six queries, each exercising a different Parquet/Presto capability:
 
 | # | Query | Feature Demonstrated |
 |---|---|---|
-| 1 | Monthly revenue trend with YoY comparison | Partition pruning |
-| 2 | Top products by category with nested attribute filtering | Nested types + predicate pushdown |
-| 3 | Customer cohort retention analysis | Join efficiency, columnar reads |
-| 4 | Clickstream funnel (browse → cart → purchase) | Predicate pushdown on sparse data |
-| 5 | Geographic revenue heatmap by quarter | Column projection (3 of 20 cols) |
-| 6 | Abandoned cart value by product category | Complex aggregation across tables |
+| 1 | Monthly revenue trend with YoY comparison | Partition pruning on orders |
+| 2 | Top products by category with dimension filtering | Nested types + predicate pushdown |
+| 3 | Customer cohort retention (repeat purchase rate) | Join efficiency, columnar reads |
+| 4 | Review sentiment distribution by product category | Predicate pushdown on review_score |
+| 5 | Geographic revenue heatmap by state/quarter | Column projection (3 of 20 cols) |
+| 6 | Delivery performance vs. review score correlation | Complex aggregation across tables |
 
 Each query has a companion markdown file with:
 - The business question it answers
@@ -127,17 +139,17 @@ Python script that:
 3. Returns valid Presto SQL
 4. Runs the query against Trino, returns results
 
-Example: "What were our top 5 products in Q4 by revenue in the Northwest?" → SQL → results.
+Example: "Which product categories in São Paulo had the highest revenue in Q4 2017?" → SQL → results.
 
 **PM angle (ADR-004):** Schema-rich formats like Parquet give LLMs enough context (column names, types, nested structures) to generate accurate SQL. CSV headers can't do this.
 
-### 7.2 Product Embedding Generation
+### 7.2 Review Embedding & Product Similarity
 
-- Presto extracts product feature vectors (category, price band, avg rating, purchase frequency)
-- Export to simple vector format
-- Python cosine similarity search: "Find products similar to X"
+- Presto extracts product feature vectors (category, price band, avg review score, order frequency) + review text
+- Generate embeddings from review text for sentiment clustering
+- Python cosine similarity search: "Find products similar to X" based on combined structured + text features
 
-**PM angle:** Parquet bridges analytics and ML — same data, same format, no ETL copy step.
+**PM angle:** Parquet bridges analytics and ML — same data, same format, no ETL copy step. Review text stored efficiently in Parquet alongside structured data.
 
 ### 7.3 Explicit Non-Goals
 
@@ -219,11 +231,11 @@ with a migration path to AI-native analytics.
 | Component | Tool | Size |
 |---|---|---|
 | Query engine | Trino (Docker) | ~1.5GB |
-| Data format | Apache Parquet | ~800MB generated data |
-| Data generation | Python + pyarrow | minimal |
+| Data source | Olist (Kaggle) | ~100MB CSV, ~50MB Parquet |
+| Data pipeline | Python + pyarrow | minimal |
 | Benchmarks | Python + matplotlib | minimal |
 | AI: NL→SQL | Python + Claude API | minimal |
 | AI: Embeddings | Python + numpy | minimal |
 | Orchestration | docker-compose | — |
 
-**Total estimated footprint:** ~2.5GB of 10GB budget.
+**Total estimated footprint:** ~1.6GB of 10GB budget.
