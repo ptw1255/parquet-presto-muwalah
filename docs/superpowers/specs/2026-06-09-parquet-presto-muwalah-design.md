@@ -105,7 +105,7 @@ This conversion pipeline IS part of the demo — it shows PM understanding of th
 
 Two personas that frame every design decision in the project.
 
-### 5.1 The Data Consumer — "Rafaela, Business Analyst"
+### 5.1 The Data Consumer — "Britt, Business Analyst"
 
 - Works at Muwalah Commerce's commercial team in São Paulo
 - Runs 10-15 queries/day to answer questions from leadership: revenue trends, category performance, delivery SLA compliance, customer retention
@@ -117,7 +117,7 @@ Two personas that frame every design decision in the project.
   - Investigate anomalies flagged by leadership (today: files a ticket, target: self-service)
   - Find product trends to inform purchasing decisions (today: gut feel, target: data-backed)
 
-### 5.2 The Platform Decision-Maker — "Carlos, Data Platform PM"
+### 5.2 The Platform Decision-Maker — "Diego, Data Platform PM"
 
 - Owns the analytics infrastructure roadmap at Muwalah Commerce
 - Evaluates build-vs-buy, format migrations, and query engine choices
@@ -133,8 +133,8 @@ Two personas that frame every design decision in the project.
 
 | Persona | Primary artifacts they validate |
 |---|---|
-| Rafaela (analyst) | Business queries, NL→SQL demo, query performance benchmarks |
-| Carlos (platform PM) | ADRs, cost model, format comparison, conversion pipeline |
+| Britt (analyst) | Business queries, NL→SQL demo, query performance benchmarks |
+| Diego (platform PM) | ADRs, cost model, format comparison, conversion pipeline |
 
 Every query in the project should answer a question Rafaela would actually ask. Every document should address a concern Carlos would actually raise.
 
@@ -148,7 +148,7 @@ Trino is the community continuation of Presto — same SQL dialect, same concept
 
 ---
 
-## 7. Business Queries (driven by Rafaela's needs)
+## 7. Business Queries (driven by Britt's needs)
 
 Six queries, each exercising a different Parquet/Presto capability:
 
@@ -199,7 +199,7 @@ Example: "Which product categories in São Paulo had the highest revenue in Q4 2
 
 ---
 
-## 9. Benchmarks & Cost Model (driven by Carlos's needs)
+## 9. Benchmarks & Cost Model (driven by Diego's needs)
 
 ### 8.1 Format Comparison (`benchmarks/format_comparison.py`)
 
