@@ -1,0 +1,21 @@
+services:
+  trino:
+    image: trinodb/trino:latest
+    container_name: muwalah-trino
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./etc/trino:/etc/trino
+      - ./etc/catalog:/etc/trino/catalog
+      - ./data/parquet:/data/parquet:ro
+      - trino-metastore:/data/metastore
+    environment:
+      - JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8
+    healthcheck:
+      test: ["CMD", "trino", "--execute", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  trino-metastore:
