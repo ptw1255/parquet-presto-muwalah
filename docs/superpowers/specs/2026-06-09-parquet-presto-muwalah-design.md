@@ -136,7 +136,7 @@ Two personas that frame every design decision in the project.
 | Britt (analyst) | Business queries, NL→SQL demo, query performance benchmarks |
 | Diego (platform PM) | ADRs, cost model, format comparison, conversion pipeline |
 
-Every query in the project should answer a question Rafaela would actually ask. Every document should address a concern Carlos would actually raise.
+Every query in the project should answer a question Britt would actually ask. Every document should address a concern Diego would actually raise.
 
 ---
 
