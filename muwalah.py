@@ -172,6 +172,37 @@ Return ONLY the SQL query, no explanation. Use fully qualified table names (muwa
     return sql.strip()
 
 
+def summarize_results(question: str, sql: str, raw: str) -> str:
+    """Send question + query results back to Granite for a natural language answer."""
+    prompt = f"""A user asked this question about an e-commerce database:
+"{question}"
+
+This SQL query was run:
+{sql}
+
+And returned these results:
+{raw}
+
+Answer the user's question in plain English based on these results. Be concise and specific -- use the actual numbers from the results. Do not mention SQL or the query."""
+
+    payload = json.dumps({
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "options": {"temperature": 0}
+    }).encode()
+
+    req = urllib.request.Request(
+        f"{OLLAMA_URL}/api/generate",
+        data=payload,
+        headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        result = json.loads(resp.read())
+
+    return result["response"].strip()
+
+
 def run_query(sql: str) -> str:
     result = subprocess.run(
         ["docker", "exec", "muwalah-trino", "trino", "--execute", sql],
@@ -289,6 +320,17 @@ def ask(question: str) -> bool:
             return False
 
     display_results(raw)
+
+    if not raw.startswith("ERROR:"):
+        with console.status("[bold]Summarizing..."):
+            try:
+                answer = summarize_results(question, sql, raw)
+            except Exception:
+                answer = None
+        if answer:
+            console.print()
+            console.print(f"[bold]{answer}[/bold]")
+
     console.print()
     return True
 
