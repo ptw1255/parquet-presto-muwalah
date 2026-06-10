@@ -89,6 +89,8 @@ This project is designed around two users: [full personas doc](docs/user-persona
 
 ## How to Run This
 
+For a detailed walkthrough of every step, see the [Getting Started Guide](docs/getting-started.md).
+
 **Prerequisites:** Docker Desktop, Python 3.10+, [Olist dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) downloaded to `data/raw/`
 
 ```bash
