@@ -294,21 +294,92 @@ def startup() -> bool:
     else:
         console.print(f"[green]ok[/green] Tables loaded ({table_count} tables)")
 
+    # Dataset stats
+    with console.status("[bold]Loading dataset stats..."):
+        stats = get_dataset_stats()
+    if stats:
+        console.print()
+        st = Table(title="Dataset Overview", box=None, padding=(0, 2), title_style="bold")
+        st.add_column("Table", style="cyan")
+        st.add_column("Rows", justify="right")
+        st.add_column("Partitioned By", style="dim")
+        total = 0
+        for name, count, part in stats:
+            total += count
+            st.add_row(name, f"{count:,}", part)
+        st.add_row("[bold]Total[/bold]", f"[bold]{total:,}[/bold]", "")
+        console.print(st)
+
     return True
+
+
+def get_dataset_stats() -> list:
+    """Query row counts and partition info for each table."""
+    tables = [
+        ("orders", "year, month"),
+        ("products", "--"),
+        ("customers", "--"),
+        ("reviews", "review_score"),
+        ("sellers", "--"),
+    ]
+    stats = []
+    for name, partitioned in tables:
+        try:
+            result = subprocess.run(
+                ["docker", "exec", "muwalah-trino", "trino", "--execute",
+                 f"SELECT COUNT(*) FROM muwalah.main.{name}"],
+                capture_output=True, text=True, timeout=15
+            )
+            count = int(result.stdout.strip().strip('"')) if result.returncode == 0 else 0
+        except Exception:
+            count = 0
+        stats.append((name, count, partitioned))
+    return stats
+
+
+def get_explain_info(sql: str) -> str:
+    """Run EXPLAIN and extract partition pruning info."""
+    try:
+        result = subprocess.run(
+            ["docker", "exec", "muwalah-trino", "trino", "--execute", f"EXPLAIN {sql}"],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode != 0:
+            return ""
+        explain = result.stdout
+        partitions = []
+        for line in explain.split("\n"):
+            if "PARTITION_KEY" in line:
+                col = line.split(":=")[0].strip().split()[-1] if ":=" in line else ""
+                vals = ""
+                if ":: [[" in line:
+                    vals = line.split(":: ")[1].strip() if ":: " in line else ""
+                if col:
+                    partitions.append(f"{col} {vals}".strip())
+        if partitions:
+            return "Partition pruning: " + ", ".join(partitions)
+        return ""
+    except Exception:
+        return ""
 
 
 def ask(question: str) -> bool:
     """Run a single NL-to-SQL question. Returns True on success."""
+    # Generate SQL
+    t0 = time.perf_counter()
     with console.status("[bold cyan]  Generating SQL with Granite...[/bold cyan]", spinner="dots"):
         try:
             sql = generate_sql(question)
         except Exception as e:
             console.print(f"  [red]Error generating SQL: {e}[/red]")
             return False
+    t_sql = time.perf_counter() - t0
 
     console.print()
     console.print(Syntax(sql, "sql", theme="monokai", padding=1))
 
+    # Run query
+    t0 = time.perf_counter()
     with console.status("[bold cyan]  Running query against Trino...[/bold cyan]", spinner="dots"):
         try:
             raw = run_query(sql)
@@ -318,19 +389,46 @@ def ask(question: str) -> bool:
         except Exception as e:
             console.print(f"  [red]Query error: {e}[/red]")
             return False
+    t_query = time.perf_counter() - t0
+
+    # Count rows
+    row_count = 0
+    if raw and not raw.startswith("ERROR:"):
+        row_count = len([line for line in raw.split("\n") if line.strip()])
 
     display_results(raw)
 
-    if not raw.startswith("ERROR:"):
+    # Summarize
+    t_summary = 0.0
+    answer = None
+    if raw and not raw.startswith("ERROR:"):
+        t0 = time.perf_counter()
         with console.status("[bold cyan]  Summarizing results...[/bold cyan]", spinner="dots"):
             try:
                 answer = summarize_results(question, sql, raw)
             except Exception:
-                answer = None
+                pass
+        t_summary = time.perf_counter() - t0
         if answer:
             console.print()
             console.print(f"[bold]{answer}[/bold]")
 
+    # Telemetry
+    console.print()
+    telemetry_parts = [
+        f"[dim]Generated in {t_sql:.1f}s[/dim]",
+        f"[dim]Queried in {t_query:.1f}s[/dim]",
+    ]
+    if t_summary > 0:
+        telemetry_parts.append(f"[dim]Summarized in {t_summary:.1f}s[/dim]")
+    telemetry_parts.append(f"[dim]{row_count} row{'s' if row_count != 1 else ''} returned[/dim]")
+
+    # Partition pruning info
+    explain_info = get_explain_info(sql)
+    if explain_info:
+        telemetry_parts.append(f"[dim]{explain_info}[/dim]")
+
+    console.print("  ".join(telemetry_parts))
     console.print()
     return True
 
