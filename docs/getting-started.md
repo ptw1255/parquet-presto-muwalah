@@ -6,15 +6,22 @@ A step-by-step walkthrough of every command in this project -- what it does, why
 
 ## Quick Start
 
-If you just want to get running, the interactive terminal handles everything:
+Two commands to go from zero to interactive NL-to-SQL:
 
 ```bash
-pip install -r requirements.txt
-python3 data/convert.py
-python3 muwalah.py
+python3 data/convert.py   # convert CSV -> Parquet (run separately so you can swap datasets)
+./demo.sh                 # everything else: installs deps, pulls AI model, starts Trino, launches prompt
 ```
 
-`muwalah.py` checks Docker, starts Trino, loads data if needed, and drops you into an interactive NL-to-SQL prompt where you ask questions in plain English and get results back. The rest of this guide explains what each piece does under the hood.
+`demo.sh` handles Python dependencies, the Granite model download, Docker/Trino startup, and data loading automatically. On subsequent runs it skips what's already done and goes straight to the prompt.
+
+You can also pass a question directly for a single query:
+
+```bash
+./demo.sh "Top 5 categories by revenue in Q4 2017?"
+```
+
+The rest of this guide explains what each piece does under the hood.
 
 ---
 
@@ -53,6 +60,8 @@ data/raw/
 ```bash
 pip install -r requirements.txt
 ```
+
+> **Note:** `./demo.sh` runs this automatically if deps are missing. You only need to run it manually if you're doing the conversion step without `demo.sh`.
 
 This installs:
 - **pyarrow** -- the Apache Arrow library that reads/writes Parquet files
@@ -282,7 +291,7 @@ python3 queries/ai/nl2sql.py
 # → Ask a question about the data: _
 ```
 
-**Easier option:** `python3 muwalah.py` wraps all of this into a single interactive session with styled output -- see [Quick Start](#quick-start).
+**Easier option:** `./demo.sh` wraps all of this into a single interactive session with styled output -- see [Quick Start](#quick-start).
 
 ### Product Similarity
 
@@ -332,17 +341,17 @@ open benchmarks/results/storage_comparison.png
 ## Quick Reference
 
 ```bash
-# === SETUP (one-time) ===
-pip install -r requirements.txt                    # install Python deps
-python3 data/convert.py                            # CSV -> Parquet
-ollama pull sam860/granite-4.0:7b                  # pull the model (once)
-
-# === INTERACTIVE (recommended) ===
-python3 muwalah.py                                 # starts everything, interactive NL-to-SQL
+# === QUICK START (recommended) ===
+python3 data/convert.py                            # CSV -> Parquet (one-time, or when data changes)
+./demo.sh                                          # auto-installs deps, pulls model, launches prompt
+./demo.sh "your question"                          # single query mode
 
 # === MANUAL START ===
+pip install -r requirements.txt                    # install Python deps
+ollama pull sam860/granite-4.0:7b                  # pull the model
 docker compose up -d                               # start Trino
 python3 scripts/load_data.py                       # load all tables
+python3 muwalah.py                                 # launch interactive prompt
 
 # === QUERY ===
 docker exec -i muwalah-trino trino \
@@ -352,8 +361,8 @@ docker exec -i muwalah-trino trino \
 docker exec muwalah-trino trino \
   --execute "SELECT COUNT(*) FROM muwalah.main.orders"  # ad-hoc SQL
 
-# === AI ===
-python3 queries/ai/nl2sql.py "your question here"  # NL -> SQL (standalone)
+# === AI (standalone) ===
+python3 queries/ai/nl2sql.py "your question here"  # NL -> SQL
 python3 queries/ai/similarity.py                   # product similarity
 
 # === BENCHMARKS ===
