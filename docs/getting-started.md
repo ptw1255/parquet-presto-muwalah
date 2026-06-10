@@ -282,7 +282,13 @@ python3 queries/ai/nl2sql.py "Top 5 categories by revenue in Sao Paulo, Q4 2017?
 3. The script runs that SQL against Trino via `docker exec`
 4. Results are displayed
 
-The interactive terminal (`./demo.sh`) adds a fourth step: it sends the question and raw results back to Granite, which returns a plain-English answer with the actual numbers. So you see all three layers -- the generated SQL, the raw data, and the natural language summary.
+The interactive terminal (`./demo.sh`) adds more on top of this:
+
+- **Natural language answer** -- sends the question and raw results back to Granite, which returns a plain-English summary with the actual numbers
+- **Dataset overview** -- on startup, shows a table of all 5 tables with row counts (348K+ total) and which columns are partitioned
+- **Query telemetry** -- after each query, shows timing for each step (SQL generation, query execution, summarization), rows returned, and partition pruning evidence from EXPLAIN
+
+So you see the full pipeline: generated SQL, raw data table, plain English answer, and performance telemetry.
 
 **Why this matters:** The schema context is the key. The model knows that `price` is a `DOUBLE`, that `year` is an `INTEGER` partition column, and that table names are fully qualified as `muwalah.main.tablename`. CSV headers are untyped strings -- they can't provide this context, which means LLMs generate unreliable SQL from them.
 
