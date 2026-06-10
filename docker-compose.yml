@@ -7,7 +7,7 @@ services:
     volumes:
       - ./etc/trino:/etc/trino
       - ./etc/catalog:/etc/trino/catalog
-      - ./data/parquet:/data/parquet:ro
+      - ./data/parquet:/data/parquet
       - trino-metastore:/data/metastore
     environment:
       - JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8
