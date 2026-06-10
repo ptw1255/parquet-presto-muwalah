@@ -4,6 +4,20 @@ A step-by-step walkthrough of every command in this project -- what it does, why
 
 ---
 
+## Quick Start
+
+If you just want to get running, the interactive terminal handles everything:
+
+```bash
+pip install -r requirements.txt
+python3 data/convert.py
+python3 muwalah.py
+```
+
+`muwalah.py` checks Docker, starts Trino, loads data if needed, and drops you into an interactive NL-to-SQL prompt where you ask questions in plain English and get results back. The rest of this guide explains what each piece does under the hood.
+
+---
+
 ## Prerequisites
 
 Before starting, make sure you have these installed:
@@ -47,6 +61,7 @@ This installs:
 - **numpy** -- used by the product similarity engine
 - **anthropic** -- Claude API client (used in an earlier iteration of NL-to-SQL; current version uses Ollama instead)
 - **trino** -- Python client for loading data into Trino's managed tables
+- **rich** -- styled terminal output for the interactive UI (`muwalah.py`)
 
 ### Run the conversion
 
@@ -267,6 +282,8 @@ python3 queries/ai/nl2sql.py
 # → Ask a question about the data: _
 ```
 
+**Easier option:** `python3 muwalah.py` wraps all of this into a single interactive session with styled output -- see [Quick Start](#quick-start).
+
 ### Product Similarity
 
 ```bash
@@ -318,8 +335,12 @@ open benchmarks/results/storage_comparison.png
 # === SETUP (one-time) ===
 pip install -r requirements.txt                    # install Python deps
 python3 data/convert.py                            # CSV -> Parquet
+ollama pull sam860/granite-4.0:7b                  # pull the model (once)
 
-# === START ===
+# === INTERACTIVE (recommended) ===
+python3 muwalah.py                                 # starts everything, interactive NL-to-SQL
+
+# === MANUAL START ===
 docker compose up -d                               # start Trino
 python3 scripts/load_data.py                       # load all tables
 
@@ -332,8 +353,7 @@ docker exec muwalah-trino trino \
   --execute "SELECT COUNT(*) FROM muwalah.main.orders"  # ad-hoc SQL
 
 # === AI ===
-ollama pull sam860/granite-4.0:7b                  # pull the model (once)
-python3 queries/ai/nl2sql.py "your question here"  # NL -> SQL
+python3 queries/ai/nl2sql.py "your question here"  # NL -> SQL (standalone)
 python3 queries/ai/similarity.py                   # product similarity
 
 # === BENCHMARKS ===
