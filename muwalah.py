@@ -266,6 +266,33 @@ def startup() -> bool:
     return True
 
 
+def ask(question: str) -> bool:
+    """Run a single NL-to-SQL question. Returns True on success."""
+    with console.status("[bold]Generating SQL..."):
+        try:
+            sql = generate_sql(question)
+        except Exception as e:
+            console.print(f"  [red]Error generating SQL: {e}[/red]")
+            return False
+
+    console.print()
+    console.print(Syntax(sql, "sql", theme="monokai", padding=1))
+
+    with console.status("[bold]Running query..."):
+        try:
+            raw = run_query(sql)
+        except subprocess.TimeoutExpired:
+            console.print("  [red]Query timed out.[/red]")
+            return False
+        except Exception as e:
+            console.print(f"  [red]Query error: {e}[/red]")
+            return False
+
+    display_results(raw)
+    console.print()
+    return True
+
+
 def repl():
     console.print()
     console.print("[dim]Ask anything about the data. Type 'exit' to quit.[/dim]")
@@ -285,38 +312,17 @@ def repl():
             console.print("[dim]Goodbye.[/dim]")
             break
 
-        # Generate SQL
-        with console.status("[bold]Generating SQL..."):
-            try:
-                sql = generate_sql(question)
-            except Exception as e:
-                console.print(f"  [red]Error generating SQL: {e}[/red]")
-                console.print()
-                continue
-
-        console.print()
-        console.print(Syntax(sql, "sql", theme="monokai", padding=1))
-
-        # Run query
-        with console.status("[bold]Running query..."):
-            try:
-                raw = run_query(sql)
-            except subprocess.TimeoutExpired:
-                console.print("  [red]Query timed out.[/red]")
-                console.print()
-                continue
-            except Exception as e:
-                console.print(f"  [red]Query error: {e}[/red]")
-                console.print()
-                continue
-
-        display_results(raw)
-        console.print()
+        ask(question)
 
 
 def main():
     try:
-        if startup():
+        if not startup():
+            return
+        if len(sys.argv) > 1:
+            question = " ".join(sys.argv[1:])
+            ask(question)
+        else:
             repl()
     except KeyboardInterrupt:
         console.print("\n[dim]Goodbye.[/dim]")
