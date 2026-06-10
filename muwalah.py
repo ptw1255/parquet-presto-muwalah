@@ -299,7 +299,7 @@ def startup() -> bool:
 
 def ask(question: str) -> bool:
     """Run a single NL-to-SQL question. Returns True on success."""
-    with console.status("[bold]Generating SQL..."):
+    with console.status("[bold cyan]  Generating SQL with Granite...[/bold cyan]", spinner="dots"):
         try:
             sql = generate_sql(question)
         except Exception as e:
@@ -309,7 +309,7 @@ def ask(question: str) -> bool:
     console.print()
     console.print(Syntax(sql, "sql", theme="monokai", padding=1))
 
-    with console.status("[bold]Running query..."):
+    with console.status("[bold cyan]  Running query against Trino...[/bold cyan]", spinner="dots"):
         try:
             raw = run_query(sql)
         except subprocess.TimeoutExpired:
@@ -322,7 +322,7 @@ def ask(question: str) -> bool:
     display_results(raw)
 
     if not raw.startswith("ERROR:"):
-        with console.status("[bold]Summarizing..."):
+        with console.status("[bold cyan]  Summarizing results...[/bold cyan]", spinner="dots"):
             try:
                 answer = summarize_results(question, sql, raw)
             except Exception:
