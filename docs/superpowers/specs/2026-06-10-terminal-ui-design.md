@@ -23,8 +23,8 @@ All steps are automatic. Each step shows a spinner while in progress, then a che
 - **Prompt:** `muwalah ->` (using `rich` styling)
 - **Input:** User types a natural-language question
 - **Output:**
-  1. Generated SQL displayed in a `rich.syntax.Syntax` panel (SQL highlighting)
-  2. Query results displayed in a `rich.table.Table`
+  1. Generated SQL displayed with `rich.syntax.Syntax` (syntax highlighting, no panel/border)
+  2. Query results displayed in a `rich.table.Table` (no box, minimal style)
 - **Exit:** `exit`, `quit`, or Ctrl+C -- all handled gracefully (no stack trace)
 - **Errors:** Trino query errors shown inline, then re-prompt
 
@@ -34,8 +34,8 @@ All steps are automatic. Each step shows a spinner while in progress, then a che
 |---|---|
 | `Panel` | Welcome banner |
 | `Status` (spinner) | Startup steps (Docker, Trino, data load) |
-| `Syntax` | SQL output with syntax highlighting |
-| `Table` | Query results |
+| `Syntax` | SQL output with syntax highlighting (no panel/border) |
+| `Table` | Query results (no box, minimal style) |
 | `Console.print` | Checkmarks, errors, prompt styling |
 
 ## Error States

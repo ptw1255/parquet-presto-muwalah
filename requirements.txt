@@ -4,3 +4,4 @@ matplotlib>=3.7.0
 numpy>=1.24.0
 anthropic>=0.40.0
 trino>=0.330.0
+rich>=13.0.0
