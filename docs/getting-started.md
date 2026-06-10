@@ -21,6 +21,22 @@ You can also pass a question directly for a single query:
 ./demo.sh "Top 5 categories by revenue in Q4 2017?"
 ```
 
+**Tip:** Run `./demo.sh` a minute before a demo to warm up the Granite model. The first query after a cold start takes ~60 seconds; subsequent queries take 2-3 seconds.
+
+### Demo Queries
+
+These 5 questions are tuned for the interactive terminal. They tell a story from revenue overview to deep investigation, and each demonstrates a different Parquet/Trino feature:
+
+| # | Question to type | What it demonstrates |
+|---|---|---|
+| 1 | `What were the top 5 product categories by total revenue?` | Join across orders + products, revenue drivers |
+| 2 | `Compare total revenue between 2017 and 2018` | Partition pruning on year, YoY growth |
+| 3 | `What percentage of orders were paid with credit card vs boleto?` | Single-table aggregation, fast response |
+| 4 | `Which 5 states have the worst average review scores, and what is their average delivery time?` | 3-table join (orders + customers + reviews), date math |
+| 5 | `What are the top 5 product categories with the most 1-star reviews?` | Partition pruning on review_score, complaint investigation |
+
+**The narrative:** Start with "where's the money?" (Q1-2), then "how do customers pay?" (Q3), then "where are customers unhappy?" (Q4-5).
+
 The rest of this guide explains what each piece does under the hood.
 
 ---
