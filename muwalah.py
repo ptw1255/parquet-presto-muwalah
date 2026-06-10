@@ -161,7 +161,7 @@ Return ONLY the SQL query, no explanation. Use fully qualified table names (muwa
         data=payload,
         headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=300) as resp:
         result = json.loads(resp.read())
 
     sql = result["response"].strip()
@@ -197,7 +197,7 @@ Answer the user's question in plain English based on these results. Be concise a
         data=payload,
         headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
+    with urllib.request.urlopen(req, timeout=300) as resp:
         result = json.loads(resp.read())
 
     return result["response"].strip()
