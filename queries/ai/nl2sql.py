@@ -1,18 +1,22 @@
 """
-Natural Language → Presto SQL via Claude API.
+Natural Language → Presto SQL via local LLM (Ollama).
 
-Sends table schema metadata to Claude with the user's question.
-Claude returns valid Presto SQL. The script runs the SQL against
+Sends table schema metadata to a local model with the user's question.
+The model returns valid Presto SQL. The script runs the SQL against
 Trino and displays results.
 
 PM angle (ADR-004): Schema-rich formats like Parquet give LLMs
 enough context to generate accurate SQL. CSV headers can't do this.
+
+Uses IBM Granite 4.0 via Ollama — fully local, no API keys needed.
 """
+import json
 import subprocess
 import sys
+import urllib.request
 
-import anthropic
 
+OLLAMA_MODEL = "sam860/granite-4.0:7b"
 
 SCHEMA_CONTEXT = """
 Trino SQL database 'muwalah.main' with these tables:
@@ -55,13 +59,8 @@ Notes:
 
 
 def generate_sql(question: str) -> str:
-    client = anthropic.Anthropic()
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=1024,
-        messages=[{
-            "role": "user",
-            "content": f"""Given this database schema:
+    """Send question + schema to local Ollama model, get back Presto SQL."""
+    prompt = f"""Given this database schema:
 
 {SCHEMA_CONTEXT}
 
@@ -69,9 +68,24 @@ Write a Presto SQL query to answer this question:
 "{question}"
 
 Return ONLY the SQL query, no explanation. Use fully qualified table names (muwalah.main.tablename)."""
-        }]
+
+    payload = json.dumps({
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "options": {"temperature": 0}
+    }).encode()
+
+    req = urllib.request.Request(
+        "http://localhost:11434/api/generate",
+        data=payload,
+        headers={"Content-Type": "application/json"}
     )
-    sql = response.content[0].text.strip()
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        result = json.loads(resp.read())
+
+    sql = result["response"].strip()
+    # Remove markdown code fences if present
     if sql.startswith('```'):
         sql = '\n'.join(sql.split('\n')[1:])
     if sql.endswith('```'):
@@ -80,6 +94,7 @@ Return ONLY the SQL query, no explanation. Use fully qualified table names (muwa
 
 
 def run_query(sql: str) -> str:
+    """Execute SQL against Trino via docker exec."""
     result = subprocess.run(
         ['docker', 'exec', 'muwalah-trino', 'trino', '--execute', sql],
         capture_output=True, text=True, timeout=30
@@ -96,6 +111,7 @@ def main():
         question = input("Ask a question about the data: ")
 
     print(f"\nQuestion: {question}")
+    print(f"Model: {OLLAMA_MODEL}")
     print("\nGenerating SQL...")
     sql = generate_sql(question)
     print(f"\nGenerated SQL:\n{sql}")
