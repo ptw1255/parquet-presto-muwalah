@@ -85,6 +85,12 @@ This project is designed around two users: [full personas doc](docs/user-persona
 - **Britt (Business Analyst)** — Runs daily queries, needs speed and self-service. Validates: queries, NL→SQL, benchmarks.
 - **Diego (Data Platform PM)** — Builds the business case for migration. Validates: ADRs, cost model, conversion pipeline.
 
+## Product portfolio
+
+The [product portfolio index](docs/product/README.md) extends the technical demonstration into an evidence-led product strategy. It includes a [product brief](docs/product/product-brief.md), [users and jobs-to-be-done](docs/product/users-and-jtbd.md), [value proposition](docs/product/value-proposition.md), [pain and opportunity-cost analysis](docs/product/pain-points-and-opportunity-costs.md), [wireframes](docs/product/wireframes.md), and [roadmap and success metrics](docs/product/roadmap-and-success-metrics.md).
+
+These artifacts distinguish implemented repository behavior, documented claims, inference, and hypotheses. Generated benchmark outputs are not treated as committed evidence when absent from the repository.
+
 ---
 
 ## How to Run This
